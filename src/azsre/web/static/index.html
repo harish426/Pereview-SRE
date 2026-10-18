@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="AI SRE investigator for Azure Application Insights traces">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
+<title>azsre – Azure App Insights SRE</title>
+<style>
+  :root { --bg:#0b1020; --panel:#141b34; --line:#26305a; --fg:#e7ebff; --mut:#8f9bd1; --acc:#6c8cff; --acc2:#9b6cff; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: Inter, system-ui, sans-serif; background: radial-gradient(1200px 600px at 20% -10%, #1b2457, var(--bg)); color:var(--fg); height:100vh; display:flex; flex-direction:column; }
+  header { padding:16px 24px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:12px; backdrop-filter: blur(8px); }
+  header h1 { font-size:18px; margin:0; background:linear-gradient(90deg,var(--acc),var(--acc2)); -webkit-background-clip:text; color:transparent; }
+  header span { color:var(--mut); font-size:13px; }
+  #chat { flex:1; overflow:auto; padding:24px; display:flex; flex-direction:column; gap:16px; max-width:960px; width:100%; margin:0 auto; }
+  .msg { padding:14px 16px; border-radius:14px; border:1px solid var(--line); background:var(--panel); white-space:pre-wrap; line-height:1.55; animation: in .25s ease; }
+  .user { align-self:flex-end; background:linear-gradient(135deg,#2a3a86,#4b2f93); max-width:80%; }
+  .steps { font-family: ui-monospace, monospace; font-size:12px; color:var(--mut); margin-bottom:10px; }
+  form { display:flex; gap:10px; padding:16px 24px; border-top:1px solid var(--line); max-width:960px; width:100%; margin:0 auto; }
+  input, button { font:inherit; border-radius:12px; border:1px solid var(--line); }
+  input { flex:1; padding:14px; background:var(--panel); color:var(--fg); outline:none; }
+  input:focus { border-color:var(--acc); box-shadow:0 0 0 3px #6c8cff33; }
+  button { padding:0 22px; background:linear-gradient(135deg,var(--acc),var(--acc2)); color:#fff; cursor:pointer; transition: transform .1s; }
+  button:hover { transform: translateY(-1px); } button:disabled { opacity:.5; cursor:wait; }
+  @keyframes in { from { opacity:0; transform:translateY(6px);} to {opacity:1;} }
+</style>
+</head>
+<body>
+<header><h1>azsre</h1><span>AI SRE · Azure Application Insights</span></header>
+<main id="chat" aria-live="polite"></main>
+<form id="form">
+  <input id="q" autocomplete="off" placeholder="e.g. Why did checkout fail with 500s in the last hour?" required minlength="3">
+  <button id="send" type="submit">Investigate</button>
+</form>
+<script>
+const chat = document.getElementById('chat'), form = document.getElementById('form'),
+      q = document.getElementById('q'), send = document.getElementById('send');
+const token = sessionStorage.getItem('azsre_token') || '';
+function add(text, cls, steps) {
+  const d = document.createElement('div'); d.className = 'msg ' + (cls || '');
+  if (steps && steps.length) {
+    const s = document.createElement('div'); s.className = 'steps';
+    s.textContent = steps.filter(x => x.event === 'tool_call').map(x => '→ ' + x.name).join('\n');
+    d.appendChild(s);
+  }
+  d.appendChild(document.createTextNode(text)); // textContent only: no HTML injection
+  chat.appendChild(d); chat.scrollTop = chat.scrollHeight; return d;
+}
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const text = q.value.trim(); if (!text) return;
+  add(text, 'user'); q.value = ''; send.disabled = true;
+  const pending = add('Investigating…');
+  try {
+    const r = await fetch('/api/ask', { method:'POST',
+      headers: { 'Content-Type':'application/json', ...(token ? {Authorization:'Bearer '+token} : {}) },
+      body: JSON.stringify({ question: text }) });
+    if (r.status === 401) { const t = prompt('Access token:'); if (t) sessionStorage.setItem('azsre_token', t); throw new Error('Unauthorized – reload and retry'); }
+    if (!r.ok) throw new Error('Request failed (' + r.status + ')');
+    const data = await r.json(); pending.remove(); add(data.answer, '', data.steps);
+  } catch (err) { pending.textContent = 'Error: ' + err.message; }
+  finally { send.disabled = false; q.focus(); }
+});
+</script>
+</body>
+</html>

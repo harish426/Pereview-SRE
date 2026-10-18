@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "azsre"
+version = "0.1.0"
+description = "AI SRE agent that investigates incidents using Azure Application Insights traces"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "azure-identity>=1.17",
+  "azure-monitor-query>=1.4",
+  "openai>=1.40",
+  "pydantic>=2.7",
+  "pydantic-settings>=2.3",
+  "fastapi>=0.111",
+  "uvicorn>=0.30",
+  "rich>=13.7",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.5"]
+
+[project.scripts]
+azsre = "azsre.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+azsre = ["web/static/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100

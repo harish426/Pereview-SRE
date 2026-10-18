@@ -1,0 +1,14 @@
+opensre/
+.venv/
+.git/
+.gitignore
+.env
+.env.*
+logs/
+tests/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+local.settings.json
+*.egg-info/
