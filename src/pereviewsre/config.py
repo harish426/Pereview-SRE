@@ -1,13 +1,26 @@
 """Typed configuration loaded from environment / .env. No secrets in code."""
 
+import os
 from functools import lru_cache
 
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+def detect_environment() -> str:
+    """'local' or 'production'. PEREVIEWSRE_ENV wins; otherwise Azure hosting implies production."""
+    explicit = os.environ.get("PEREVIEWSRE_ENV", "").strip().lower()
+    if explicit in ("local", "production"):
+        return explicit
+    if os.environ.get("WEBSITE_INSTANCE_ID"):
+        return "production"
+    return "local"
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="PEREVIEWSRE_", env_file=".env", extra="ignore")
+
+    env: str = Field(default_factory=detect_environment)
 
     appinsights_resource_id: str = ""
 
@@ -30,20 +43,26 @@ class Settings(BaseSettings):
     log_max_bytes: int = 5_000_000
     log_backup_count: int = 5
 
+    @property
+    def is_production(self) -> bool:
+        return self.env == "production"
+
     def validate_required(self) -> None:
-        missing = [
-            name
-            for name, val in {
-                "PEREVIEWSRE_APPINSIGHTS_RESOURCE_ID": self.appinsights_resource_id,
-                "PEREVIEWSRE_AOAI_ENDPOINT": self.aoai_endpoint,
-                "PEREVIEWSRE_AOAI_DEPLOYMENT": self.aoai_deployment,
-            }.items()
-            if not val
-        ]
+        required = {
+            "PEREVIEWSRE_APPINSIGHTS_RESOURCE_ID": self.appinsights_resource_id,
+            "PEREVIEWSRE_AOAI_ENDPOINT": self.aoai_endpoint,
+            "PEREVIEWSRE_AOAI_DEPLOYMENT": self.aoai_deployment,
+        }
+        if self.is_production:
+            required["PEREVIEWSRE_WEB_TOKEN"] = self.web_token.get_secret_value()
+        missing = [name for name, val in required.items() if not val]
         if missing:
             raise RuntimeError(f"Missing required settings: {', '.join(missing)}")
 
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    # Layering (lowest -> highest): .env, .env.<environment>, real environment variables.
+    # Under `func start`, local.settings.json values are real environment variables.
+    env = detect_environment()
+    return Settings(_env_file=(".env", f".env.{env}"))

@@ -32,8 +32,8 @@ class ChatService:
     def check_auth(self, request: Request, authorization: str | None) -> None:
         token = self._settings.web_token.get_secret_value()
         if not token:
-            if running_in_azure():
-                # Function is publicly reachable: never serve without authentication.
+            if running_in_azure() or self._settings.is_production:
+                # Production is reachable by others: never serve without authentication.
                 self._log.error("PEREVIEWSRE_WEB_TOKEN not set; refusing request in Azure")
                 raise HTTPException(status_code=503, detail="Service not configured")
             return
