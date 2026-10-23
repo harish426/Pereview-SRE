@@ -3,9 +3,9 @@
   "Values": {
     "FUNCTIONS_WORKER_RUNTIME": "python",
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
-    "AZSRE_APPINSIGHTS_RESOURCE_ID": "/subscriptions/<sub-id>/resourceGroups/<rg>/providers/microsoft.insights/components/<name>",
-    "AZSRE_AOAI_ENDPOINT": "https://<resource>.openai.azure.com/",
-    "AZSRE_AOAI_DEPLOYMENT": "<deployment>",
-    "AZSRE_WEB_TOKEN": "<long-random-token>"
+    "PEREVIEWSRE_APPINSIGHTS_RESOURCE_ID": "/subscriptions/<sub-id>/resourceGroups/<rg>/providers/microsoft.insights/components/<name>",
+    "PEREVIEWSRE_AOAI_ENDPOINT": "https://<resource>.openai.azure.com/",
+    "PEREVIEWSRE_AOAI_DEPLOYMENT": "<deployment>",
+    "PEREVIEWSRE_WEB_TOKEN": "<long-random-token>"
   }
 }

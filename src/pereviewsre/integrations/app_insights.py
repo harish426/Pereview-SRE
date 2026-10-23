@@ -7,10 +7,10 @@ from azure.core.exceptions import HttpResponseError
 from azure.identity import DefaultAzureCredential
 from azure.monitor.query import LogsQueryClient, LogsQueryStatus
 
-from azsre.config import Settings
-from azsre.logging_setup import get_logger
-from azsre.security.kql_guard import KqlRejected, sanitize_kql, validate_operation_id
-from azsre.security.redaction import redact_value
+from pereviewsre.config import Settings
+from pereviewsre.logging_setup import get_logger
+from pereviewsre.security.kql_guard import KqlRejected, sanitize_kql, validate_operation_id
+from pereviewsre.security.redaction import redact_value
 
 TRACE_KQL = """
 let opId = '{op_id}';

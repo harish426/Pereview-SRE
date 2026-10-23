@@ -5,10 +5,10 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from azsre.integrations.app_insights import AppInsightsClient
-from azsre.logging_setup import get_logger
-from azsre.security.kql_guard import KqlRejected
-from azsre.security.redaction import redact_text
+from pereviewsre.integrations.app_insights import AppInsightsClient
+from pereviewsre.logging_setup import get_logger
+from pereviewsre.security.kql_guard import KqlRejected
+from pereviewsre.security.redaction import redact_text
 
 SCHEMA_HINT = (
     "Tables: requests(timestamp,name,url,success,resultCode,duration,operation_Id,id,"

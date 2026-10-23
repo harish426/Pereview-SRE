@@ -1,12 +1,12 @@
 import logging
 
-from azsre.logging_setup import RedactingFormatter, get_logger
-from azsre.security.redaction import redact_text
+from pereviewsre.logging_setup import RedactingFormatter, get_logger
+from pereviewsre.security.redaction import redact_text
 
 
 def test_logger_namespace():
-    assert get_logger("tools.registry").name == "azsre.tools.registry"
-    assert get_logger("azsre.agent").name == "azsre.agent"
+    assert get_logger("tools.registry").name == "pereviewsre.tools.registry"
+    assert get_logger("pereviewsre.agent").name == "pereviewsre.agent"
 
 
 def test_formatter_redacts_message_and_traceback():
@@ -16,7 +16,7 @@ def test_formatter_redacts_message_and_traceback():
     except RuntimeError:
         import sys
 
-        rec = logging.LogRecord("azsre.x", logging.ERROR, "f", 1, "key=%s", ("api_key=SECRET1",), sys.exc_info())
+        rec = logging.LogRecord("pereviewsre.x", logging.ERROR, "f", 1, "key=%s", ("api_key=SECRET1",), sys.exc_info())
     out = fmt.format(rec)
     assert "SECRET1" not in out and "hunter2" not in out and "abc.def.ghi" not in out
 

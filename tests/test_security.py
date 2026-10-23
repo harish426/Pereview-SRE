@@ -1,7 +1,7 @@
 import pytest
 
-from azsre.security.kql_guard import KqlRejected, sanitize_kql, validate_operation_id
-from azsre.security.redaction import redact_text
+from pereviewsre.security.kql_guard import KqlRejected, sanitize_kql, validate_operation_id
+from pereviewsre.security.redaction import redact_text
 
 
 def test_allows_simple_query_and_adds_take():

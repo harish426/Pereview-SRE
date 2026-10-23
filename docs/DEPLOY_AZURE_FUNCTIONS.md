@@ -15,13 +15,13 @@ func start                                             # http://localhost:7071
 ```
 Locally the app uses your `az login` identity. Test:
 ```powershell
-curl -X POST http://localhost:7071/api/ask -H "Authorization: Bearer <AZSRE_WEB_TOKEN>" `
+curl -X POST http://localhost:7071/api/ask -H "Authorization: Bearer <PEREVIEWSRE_WEB_TOKEN>" `
   -H "Content-Type: application/json" -d '{"question":"Why did requests fail in the last hour?"}'
 ```
 
 ## 3. Create the Azure resources
 ```powershell
-$RG="rg-azsre"; $LOC="eastus"; $ST="stazsre$(Get-Random -Maximum 99999)"; $APP="azsre-$(Get-Random -Maximum 99999)"
+$RG="rg-pereviewsre"; $LOC="eastus"; $ST="stpereviewsre$(Get-Random -Maximum 99999)"; $APP="pereviewsre-$(Get-Random -Maximum 99999)"
 az group create -n $RG -l $LOC
 az storage account create -n $ST -g $RG -l $LOC --sku Standard_LRS --allow-blob-public-access false
 az functionapp create -n $APP -g $RG --storage-account $ST --consumption-plan-location $LOC `
@@ -44,14 +44,14 @@ az role assignment create --assignee $PID --role "Cognitive Services OpenAI User
 ```powershell
 $TOKEN=[Convert]::ToBase64String((1..32 | % { Get-Random -Maximum 256 }) -as [byte[]])
 az functionapp config appsettings set -n $APP -g $RG --settings `
-  AZSRE_APPINSIGHTS_RESOURCE_ID="<APPINSIGHTS_RESOURCE_ID>" `
-  AZSRE_AOAI_ENDPOINT="https://<resource>.openai.azure.com/" `
-  AZSRE_AOAI_DEPLOYMENT="<deployment>" `
-  AZSRE_WEB_TOKEN="$TOKEN" `
+  PEREVIEWSRE_APPINSIGHTS_RESOURCE_ID="<APPINSIGHTS_RESOURCE_ID>" `
+  PEREVIEWSRE_AOAI_ENDPOINT="https://<resource>.openai.azure.com/" `
+  PEREVIEWSRE_AOAI_DEPLOYMENT="<deployment>" `
+  PEREVIEWSRE_WEB_TOKEN="$TOKEN" `
   SCM_DO_BUILD_DURING_DEPLOYMENT=true
 echo $TOKEN   # save it: needed as the Bearer token
 ```
-`AZSRE_WEB_TOKEN` is **mandatory in Azure**: without it the app returns 503 (fails closed).
+`PEREVIEWSRE_WEB_TOKEN` is **mandatory in Azure**: without it the app returns 503 (fails closed).
 
 ## 6. Publish
 ```powershell
@@ -62,7 +62,7 @@ Open `https://<app>.azurewebsites.net/` (the UI will prompt for the token on 401
 
 ## Limits and notes
 - **Timeouts:** HTTP-triggered functions are cut off by the Azure load balancer at **~230 s**,
-  regardless of `functionTimeout`. Keep `AZSRE_MAX_AGENT_STEPS` modest (default 8). For longer
+  regardless of `functionTimeout`. Keep `PEREVIEWSRE_MAX_AGENT_STEPS` modest (default 8). For longer
   investigations, switch to a queue-triggered function that stores the result.
 - **Logs:** in Azure the file handler is disabled (ephemeral disk). Logs are redacted and go to
   the Function's Application Insights (`traces` table). Query them with KQL, or Log Stream.

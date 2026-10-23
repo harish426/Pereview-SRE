@@ -7,7 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="AZSRE_", env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_prefix="PEREVIEWSRE_", env_file=".env", extra="ignore")
 
     appinsights_resource_id: str = ""
 
@@ -34,9 +34,9 @@ class Settings(BaseSettings):
         missing = [
             name
             for name, val in {
-                "AZSRE_APPINSIGHTS_RESOURCE_ID": self.appinsights_resource_id,
-                "AZSRE_AOAI_ENDPOINT": self.aoai_endpoint,
-                "AZSRE_AOAI_DEPLOYMENT": self.aoai_deployment,
+                "PEREVIEWSRE_APPINSIGHTS_RESOURCE_ID": self.appinsights_resource_id,
+                "PEREVIEWSRE_AOAI_ENDPOINT": self.aoai_endpoint,
+                "PEREVIEWSRE_AOAI_DEPLOYMENT": self.aoai_deployment,
             }.items()
             if not val
         ]

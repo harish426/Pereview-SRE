@@ -1,4 +1,4 @@
-# azsre – AI SRE for Azure Application Insights
+# pereviewsre – AI SRE for Azure Application Insights
 
 Ask a question in plain English; the agent writes KQL, pulls the exact correlated traces
 (`operation_Id`), and returns a root-cause analysis. Modeled on the OpenSRE pattern
@@ -6,14 +6,14 @@ Ask a question in plain English; the agent writes KQL, pulls the exact correlate
 
 ## Layout
 ```
-src/azsre/
+src/pereviewsre/
   config.py            typed settings from env (no secrets in code)
   agent/               system prompt + tool-calling loop (Azure OpenAI)
   tools/registry.py    read-only tools: run_kql, get_trace
   integrations/        Application Insights client (Entra ID auth)
   security/            kql_guard (read-only policy), redaction (secrets/PII)
   web/                 FastAPI + chat UI
-  cli.py               azsre ask | chat | web
+  cli.py               pereviewsre ask | chat | web
 tests/                 guardrail tests
 ```
 
@@ -53,10 +53,10 @@ Edit `.env` and set at least:
 
 | Variable | Description |
 | --- | --- |
-| `AZSRE_APPINSIGHTS_RESOURCE_ID` | Full ARM resource ID of the App Insights component |
-| `AZSRE_AOAI_ENDPOINT` | e.g. `https://<name>.openai.azure.com/` |
-| `AZSRE_AOAI_DEPLOYMENT` | Your chat model deployment name |
-| `AZSRE_AOAI_API_KEY` | Optional. Leave empty for keyless Entra ID auth |
+| `PEREVIEWSRE_APPINSIGHTS_RESOURCE_ID` | Full ARM resource ID of the App Insights component |
+| `PEREVIEWSRE_AOAI_ENDPOINT` | e.g. `https://<name>.openai.azure.com/` |
+| `PEREVIEWSRE_AOAI_DEPLOYMENT` | Your chat model deployment name |
+| `PEREVIEWSRE_AOAI_API_KEY` | Optional. Leave empty for keyless Entra ID auth |
 
 Find the resource ID with:
 ```powershell
@@ -74,34 +74,34 @@ az login
 pytest
 
 # One-shot question
-azsre ask "Why are checkouts failing in the last hour?"
+pereviewsre ask "Why are checkouts failing in the last hour?"
 
 # Interactive chat in the terminal (type 'exit' to quit)
-azsre chat
+pereviewsre chat
 
 # Web chat UI at http://127.0.0.1:8080
-azsre web
+pereviewsre web
 ```
 
-Without installing the script entry point you can also run `python -m azsre.cli ask "..."`.
+Without installing the script entry point you can also run `python -m pereviewsre.cli ask "..."`.
 
 ## Logs
 Every component (agent, tool registry, App Insights client, CLI, web service) writes to a
-shared rotating log file at `logs/azsre.log` (also echoed to the console). Each line is
+shared rotating log file at `logs/pereviewsre.log` (also echoed to the console). Each line is
 passed through the redaction filter, including tracebacks.
 
 ```powershell
-Get-Content .\logs\azsre.log -Wait -Tail 50   # follow logs live
+Get-Content .\logs\pereviewsre.log -Wait -Tail 50   # follow logs live
 ```
 
 What is logged: questions (redacted), LLM steps and token usage, tool names and arguments,
 KQL queries, row/column counts, rejected queries and errors. Telemetry row contents are
-**never** logged. Set `AZSRE_LOG_LEVEL=DEBUG` and `AZSRE_LOG_DIR` in `.env` to tune.
+**never** logged. Set `PEREVIEWSRE_LOG_LEVEL=DEBUG` and `PEREVIEWSRE_LOG_DIR` in `.env` to tune.
 
 ## Troubleshooting
 - **`Missing required settings`**: fill the required values in `.env`.
 - **401/403 from Azure**: re-run `az login` and check the role assignments above.
-- **`azsre` not found**: activate the virtualenv first.
+- **`pereviewsre` not found**: activate the virtualenv first.
 - **pip read timeout**: use the `--default-timeout 120 --retries 10` install command above.
 
 See [SECURITY.md](SECURITY.md) for the security model and

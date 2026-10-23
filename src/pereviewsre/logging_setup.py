@@ -11,8 +11,8 @@ import sys
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-from azsre.config import Settings
-from azsre.security.redaction import redact_text
+from pereviewsre.config import Settings
+from pereviewsre.security.redaction import redact_text
 
 _FORMAT = "%(asctime)s | %(levelname)-7s | %(name)s | %(message)s"
 _configured = False
@@ -33,7 +33,7 @@ class RedactingFormatter(logging.Formatter):
 def setup_logging(settings: Settings) -> Path:
     """Idempotent. Returns the log file path."""
     global _configured
-    log_path = Path(settings.log_dir) / "azsre.log"
+    log_path = Path(settings.log_dir) / "pereviewsre.log"
     if _configured:
         return log_path
 
@@ -45,7 +45,7 @@ def setup_logging(settings: Settings) -> Path:
     console = logging.StreamHandler(sys.stderr)
     console.setFormatter(formatter)
 
-    root = logging.getLogger("azsre")
+    root = logging.getLogger("pereviewsre")
     root.setLevel(getattr(logging, settings.log_level.upper(), logging.INFO))
     if not in_azure:
         file_handler = RotatingFileHandler(
@@ -69,7 +69,7 @@ def setup_logging(settings: Settings) -> Path:
 
 
 def get_logger(name: str) -> logging.Logger:
-    """Return a logger under the 'azsre' namespace so it inherits the handlers."""
-    if not name.startswith("azsre"):
-        name = f"azsre.{name}"
+    """Return a logger under the 'pereviewsre' namespace so it inherits the handlers."""
+    if not name.startswith("pereviewsre"):
+        name = f"pereviewsre.{name}"
     return logging.getLogger(name)

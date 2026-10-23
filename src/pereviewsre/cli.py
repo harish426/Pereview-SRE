@@ -1,4 +1,4 @@
-"""Command line interface: `azsre ask "..."`, `azsre chat`, `azsre web`."""
+"""Command line interface: `pereviewsre ask "..."`, `pereviewsre chat`, `pereviewsre web`."""
 
 import argparse
 import sys
@@ -6,9 +6,9 @@ import sys
 from rich.console import Console
 from rich.markdown import Markdown
 
-from azsre.agent.sre_agent import SreAgent
-from azsre.config import Settings, get_settings
-from azsre.logging_setup import get_logger, setup_logging
+from pereviewsre.agent.sre_agent import SreAgent
+from pereviewsre.config import Settings, get_settings
+from pereviewsre.logging_setup import get_logger, setup_logging
 
 
 class Cli:
@@ -40,7 +40,7 @@ class Cli:
                 "Starting web server host=%s port=%d", self._settings.web_host, self._settings.web_port
             )
             uvicorn.run(
-                "azsre.web.server:app",
+                "pereviewsre.web.server:app",
                 host=self._settings.web_host,
                 port=self._settings.web_port,
                 log_config=None,  # our logging config handles everything
@@ -51,7 +51,7 @@ class Cli:
         if args.cmd == "ask":
             self._ask(agent, args.question)
             return
-        self._console.print("[bold]azsre chat[/bold] (type 'exit' to quit)")
+        self._console.print("[bold]pereviewsre chat[/bold] (type 'exit' to quit)")
         while True:
             try:
                 q = self._console.input("[cyan]you> [/cyan]").strip()
@@ -64,7 +64,7 @@ class Cli:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(prog="azsre", description="Azure App Insights AI SRE")
+    parser = argparse.ArgumentParser(prog="pereviewsre", description="Azure App Insights AI SRE")
     sub = parser.add_subparsers(dest="cmd", required=True)
     p_ask = sub.add_parser("ask", help="Investigate a single question")
     p_ask.add_argument("question")

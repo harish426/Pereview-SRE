@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "azsre"
+name = "pereviewsre"
 version = "0.1.0"
 description = "AI SRE agent that investigates incidents using Azure Application Insights traces"
 readme = "README.md"
@@ -23,13 +23,13 @@ dependencies = [
 dev = ["pytest>=8", "ruff>=0.5"]
 
 [project.scripts]
-azsre = "azsre.cli:main"
+pereviewsre = "pereviewsre.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-azsre = ["web/static/*"]
+pereviewsre = ["web/static/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

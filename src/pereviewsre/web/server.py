@@ -8,9 +8,9 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
-from azsre.agent.sre_agent import SreAgent
-from azsre.config import get_settings
-from azsre.logging_setup import get_logger, running_in_azure, setup_logging
+from pereviewsre.agent.sre_agent import SreAgent
+from pereviewsre.config import get_settings
+from pereviewsre.logging_setup import get_logger, running_in_azure, setup_logging
 
 STATIC = Path(__file__).parent / "static"
 
@@ -34,7 +34,7 @@ class ChatService:
         if not token:
             if running_in_azure():
                 # Function is publicly reachable: never serve without authentication.
-                self._log.error("AZSRE_WEB_TOKEN not set; refusing request in Azure")
+                self._log.error("PEREVIEWSRE_WEB_TOKEN not set; refusing request in Azure")
                 raise HTTPException(status_code=503, detail="Service not configured")
             return
         supplied = (authorization or "").removeprefix("Bearer ").strip()
@@ -60,7 +60,7 @@ class ChatService:
 
 
 service = ChatService()
-app = FastAPI(title="azsre", docs_url=None, redoc_url=None, openapi_url=None)
+app = FastAPI(title="pereviewsre", docs_url=None, redoc_url=None, openapi_url=None)
 
 
 def _auth(request: Request, authorization: str | None = Header(default=None)) -> None:

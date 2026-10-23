@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="AI SRE investigator for Azure Application Insights traces">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'">
-<title>azsre – Azure App Insights SRE</title>
+<title>pereviewsre – Azure App Insights SRE</title>
 <style>
   :root { --bg:#0b1020; --panel:#141b34; --line:#26305a; --fg:#e7ebff; --mut:#8f9bd1; --acc:#6c8cff; --acc2:#9b6cff; }
   * { box-sizing: border-box; }
@@ -27,7 +27,7 @@
 </style>
 </head>
 <body>
-<header><h1>azsre</h1><span>AI SRE · Azure Application Insights</span></header>
+<header><h1>pereviewsre</h1><span>AI SRE · Azure Application Insights</span></header>
 <main id="chat" aria-live="polite"></main>
 <form id="form">
   <input id="q" autocomplete="off" placeholder="e.g. Why did checkout fail with 500s in the last hour?" required minlength="3">
@@ -36,7 +36,7 @@
 <script>
 const chat = document.getElementById('chat'), form = document.getElementById('form'),
       q = document.getElementById('q'), send = document.getElementById('send');
-const token = sessionStorage.getItem('azsre_token') || '';
+const token = sessionStorage.getItem('pereviewsre_token') || '';
 function add(text, cls, steps) {
   const d = document.createElement('div'); d.className = 'msg ' + (cls || '');
   if (steps && steps.length) {
@@ -56,7 +56,7 @@ form.addEventListener('submit', async (e) => {
     const r = await fetch('/api/ask', { method:'POST',
       headers: { 'Content-Type':'application/json', ...(token ? {Authorization:'Bearer '+token} : {}) },
       body: JSON.stringify({ question: text }) });
-    if (r.status === 401) { const t = prompt('Access token:'); if (t) sessionStorage.setItem('azsre_token', t); throw new Error('Unauthorized – reload and retry'); }
+    if (r.status === 401) { const t = prompt('Access token:'); if (t) sessionStorage.setItem('pereviewsre_token', t); throw new Error('Unauthorized – reload and retry'); }
     if (!r.ok) throw new Error('Request failed (' + r.status + ')');
     const data = await r.json(); pending.remove(); add(data.answer, '', data.steps);
   } catch (err) { pending.textContent = 'Error: ' + err.message; }

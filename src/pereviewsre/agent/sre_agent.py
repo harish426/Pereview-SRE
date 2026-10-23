@@ -6,12 +6,12 @@ from typing import Any
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
 from openai import AzureOpenAI
 
-from azsre.agent.prompts import SYSTEM_PROMPT
-from azsre.config import Settings
-from azsre.integrations.app_insights import AppInsightsClient
-from azsre.logging_setup import get_logger
-from azsre.security.redaction import redact_text
-from azsre.tools.registry import ToolRegistry
+from pereviewsre.agent.prompts import SYSTEM_PROMPT
+from pereviewsre.config import Settings
+from pereviewsre.integrations.app_insights import AppInsightsClient
+from pereviewsre.logging_setup import get_logger
+from pereviewsre.security.redaction import redact_text
+from pereviewsre.tools.registry import ToolRegistry
 
 EventCb = Callable[[str, dict[str, Any]], None]
 

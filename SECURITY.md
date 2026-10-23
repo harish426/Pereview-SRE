@@ -11,6 +11,6 @@
   (Monitoring Reader / Log Analytics Reader on the one App Insights resource).
 - **Secrets**: only via environment / `.env` (git-ignored). `SecretStr` prevents accidental logging.
 - **Web**: binds to 127.0.0.1 by default, optional constant-time bearer token
-  (`AZSRE_WEB_TOKEN`), no OpenAPI docs exposed, CSP header, UI renders text only.
+  (`PEREVIEWSRE_WEB_TOKEN`), no OpenAPI docs exposed, CSP header, UI renders text only.
   Put behind TLS + SSO (e.g. Azure Container Apps auth) before exposing beyond localhost.
 - **Limits**: query timeout, max rows, max agent steps, tool output size cap.
