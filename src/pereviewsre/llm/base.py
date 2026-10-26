@@ -18,41 +18,41 @@ from pereviewsre.logging_setup import get_logger
 
 @dataclass
 class ToolCall:
-    id: str
-    name: str
-    arguments: str  # JSON string
+  id: str
+  name: str
+  arguments: str  # JSON string
 
 
 @dataclass
 class LLMResponse:
-    content: str = ""
-    tool_calls: list[ToolCall] = field(default_factory=list)
-    prompt_tokens: int | None = None
-    completion_tokens: int | None = None
-    raw: Any = None
+  content: str = ""
+  tool_calls: list[ToolCall] = field(default_factory=list)
+  prompt_tokens: int | None = None
+  completion_tokens: int | None = None
+  raw: Any = None
 
-    def as_message(self) -> dict[str, Any]:
-        return {
-            "role": "assistant",
-            "content": self.content,
-            "tool_calls": self.tool_calls,
-            "raw": self.raw,
-        }
+  def as_message(self) -> dict[str, Any]:
+    return {
+      "role": "assistant",
+      "content": self.content,
+      "tool_calls": self.tool_calls,
+      "raw": self.raw,
+    }
 
 
 class LLMProvider(ABC):
-    """Implement `chat` to add a new model backend."""
+  """Implement `chat` to add a new model backend."""
 
-    name: str = "base"
+  name: str = "base"
 
-    def __init__(self) -> None:
-        self._log = get_logger(f"{__name__}.{self.name}")
+  def __init__(self) -> None:
+    self._log = get_logger(f"{__name__}.{self.name}")
 
-    @abstractmethod
-    def chat(
-        self,
-        system: str,
-        messages: list[dict[str, Any]],
-        tools: list[dict[str, Any]] | None = None,
-    ) -> LLMResponse:
-        """Send one turn. `tools` use the OpenAI function-spec format."""
+  @abstractmethod
+  def chat(
+    self,
+    system: str,
+    messages: list[dict[str, Any]],
+    tools: list[dict[str, Any]] | None = None,
+  ) -> LLMResponse:
+    """Send one turn. `tools` use the OpenAI function-spec format."""

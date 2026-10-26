@@ -36,3 +36,4 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 100
+indent-width = 2

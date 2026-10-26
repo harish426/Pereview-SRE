@@ -27,7 +27,7 @@
 </style>
 </head>
 <body>
-<header><h1>pereviewsre</h1><span>AI SRE · Azure Application Insights</span></header>
+<header><h1>pereviewsre</h1><span>AI SRE · Azure Application Insights</span><button id="newchat" type="button" style="margin-left:auto;padding:8px 14px">New chat</button></header>
 <main id="chat" aria-live="polite"></main>
 <form id="form">
   <input id="q" autocomplete="off" placeholder="e.g. Why did checkout fail with 500s in the last hour?" required minlength="3">
@@ -37,6 +37,16 @@
 const chat = document.getElementById('chat'), form = document.getElementById('form'),
       q = document.getElementById('q'), send = document.getElementById('send');
 const token = sessionStorage.getItem('pereviewsre_token') || '';
+// One id per page load = one chat. Server-side memory is tied to it and dropped when the tab closes.
+let sessionId = crypto.randomUUID();
+const authHeaders = () => (token ? {Authorization:'Bearer '+token} : {});
+function endSession(id) {
+  fetch('/api/session/' + id, { method:'DELETE', headers: authHeaders(), keepalive: true }).catch(() => {});
+}
+window.addEventListener('pagehide', () => endSession(sessionId));
+document.getElementById('newchat').addEventListener('click', () => {
+  endSession(sessionId); sessionId = crypto.randomUUID(); chat.innerHTML = ''; q.focus();
+});
 function add(text, cls, steps) {
   const d = document.createElement('div'); d.className = 'msg ' + (cls || '');
   if (steps && steps.length) {
@@ -54,8 +64,8 @@ form.addEventListener('submit', async (e) => {
   const pending = add('Investigating…');
   try {
     const r = await fetch('/api/ask', { method:'POST',
-      headers: { 'Content-Type':'application/json', ...(token ? {Authorization:'Bearer '+token} : {}) },
-      body: JSON.stringify({ question: text }) });
+      headers: { 'Content-Type':'application/json', ...authHeaders() },
+      body: JSON.stringify({ question: text, session_id: sessionId }) });
     if (r.status === 401) { const t = prompt('Access token:'); if (t) sessionStorage.setItem('pereviewsre_token', t); throw new Error('Unauthorized – reload and retry'); }
     if (!r.ok) throw new Error('Request failed (' + r.status + ')');
     const data = await r.json(); pending.remove(); add(data.answer, '', data.steps);
