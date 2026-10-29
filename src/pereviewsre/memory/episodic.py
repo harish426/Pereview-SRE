@@ -91,7 +91,7 @@ class MemoryStore:
 
   def _evict(self) -> None:
     now = time.monotonic()
-    for sid in [s for s, m in self._sessions.items() if now - m.last_used > self._ttl]:
+    for sid in [s for s, m in self._sessions.items() if now - m.last_used >= self._ttl]:
       del self._sessions[sid]
       self._log.info("Session memory expired")
     # Still over the cap: drop least recently used.

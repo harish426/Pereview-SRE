@@ -11,7 +11,7 @@ import azure.functions as func
 # Make `src/pereviewsre` importable when deployed as a plain Functions project.
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from pereviewsre.web.server import app as fastapi_app  # noqa: E402
+from pereviewsre.web.server import app as fastapi_app
 
 # ANONYMOUS at the Functions layer; access is enforced by PEREVIEWSRE_WEB_TOKEN (required in Azure)
 # or by App Service Authentication (Entra ID) in front of the app.

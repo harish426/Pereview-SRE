@@ -24,6 +24,24 @@
   button { padding:0 22px; background:linear-gradient(135deg,var(--acc),var(--acc2)); color:#fff; cursor:pointer; transition: transform .1s; }
   button:hover { transform: translateY(-1px); } button:disabled { opacity:.5; cursor:wait; }
   @keyframes in { from { opacity:0; transform:translateY(6px);} to {opacity:1;} }
+  .msg.user, .msg.plain { white-space:pre-wrap; }
+  .msg.bot { white-space:normal; }
+  .md h2 { font-size:15px; margin:18px 0 8px; padding:6px 12px; border-left:3px solid var(--acc); background:#6c8cff14; border-radius:0 8px 8px 0; color:#fff; }
+  .md h2:first-child { margin-top:0; }
+  .md h1, .md h3, .md h4 { margin:14px 0 6px; color:var(--acc); }
+  .md p { margin:6px 0; }
+  .md ul, .md ol { margin:6px 0; padding-left:22px; }
+  .md li { margin:3px 0; }
+  .md code { font-family: ui-monospace, monospace; font-size:12.5px; background:#0b1020; border:1px solid var(--line); border-radius:6px; padding:1px 6px; color:#b9c6ff; }
+  .md pre { background:#0b1020; border:1px solid var(--line); border-radius:10px; padding:12px; overflow:auto; margin:8px 0; }
+  .md pre code { border:0; padding:0; background:none; }
+  .md table { border-collapse:collapse; width:100%; margin:8px 0; font-size:13px; display:block; overflow:auto; }
+  .md th, .md td { border:1px solid var(--line); padding:6px 10px; text-align:left; vertical-align:top; }
+  .md th { background:#1c2650; color:#fff; }
+  .md tr:nth-child(even) td { background:#ffffff08; }
+  .md strong { color:#fff; }
+  details.steps summary { cursor:pointer; user-select:none; }
+  details.steps div { white-space:pre-wrap; margin-top:6px; }
 </style>
 </head>
 <body>
@@ -47,14 +65,49 @@ window.addEventListener('pagehide', () => endSession(sessionId));
 document.getElementById('newchat').addEventListener('click', () => {
   endSession(sessionId); sessionId = crypto.randomUUID(); chat.innerHTML = ''; q.focus();
 });
-function add(text, cls, steps) {
-  const d = document.createElement('div'); d.className = 'msg ' + (cls || '');
-  if (steps && steps.length) {
-    const s = document.createElement('div'); s.className = 'steps';
-    s.textContent = steps.filter(x => x.event === 'tool_call').map(x => '→ ' + x.name).join('\n');
-    d.appendChild(s);
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function inline(s) { // input is already HTML-escaped
+  return s.replace(/`([^`]+)`/g, '<code>$1</code>')
+          .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+          .replace(/(^|[^*])\*([^*\s][^*]*)\*/g, '$1<em>$2</em>');
+}
+function renderMarkdown(src) { // escape everything first, then add our own safe tags only
+  const lines = esc(src).split('\n'); let out = '', i = 0;
+  const cells = l => l.trim().replace(/^\||\|$/g,'').split('|').map(c => c.trim());
+  while (i < lines.length) {
+    const l = lines[i];
+    if (/^```/.test(l)) { let code = []; i++; while (i < lines.length && !/^```/.test(lines[i])) code.push(lines[i++]); i++;
+      out += '<pre><code>' + code.join('\n') + '</code></pre>'; continue; }
+    const h = l.match(/^(#{1,4})\s+(.*)/);
+    if (h) { const n = Math.max(2, h[1].length); out += '<h'+n+'>' + inline(h[2]) + '</h'+n+'>'; i++; continue; }
+    if (/^\s*\|.*\|\s*$/.test(l) && i+1 < lines.length && /^\s*\|?[\s:|-]+\|[\s:|-]*$/.test(lines[i+1])) {
+      out += '<table><thead><tr>' + cells(l).map(c => '<th>'+inline(c)+'</th>').join('') + '</tr></thead><tbody>'; i += 2;
+      while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])) out += '<tr>' + cells(lines[i++]).map(c => '<td>'+inline(c)+'</td>').join('') + '</tr>';
+      out += '</tbody></table>'; continue; }
+    const ul = /^\s*[-*]\s+/, ol = /^\s*\d+[.)]\s+/;
+    if (ul.test(l) || ol.test(l)) { const re = ul.test(l) ? ul : ol, tag = re === ul ? 'ul' : 'ol'; out += '<'+tag+'>';
+      while (i < lines.length && re.test(lines[i])) out += '<li>' + inline(lines[i++].replace(re,'')) + '</li>';
+      out += '</'+tag+'>'; continue; }
+    if (!l.trim()) { i++; continue; }
+    let p = []; while (i < lines.length && lines[i].trim() && !/^(```|#{1,4}\s|\s*[-*]\s|\s*\d+[.)]\s|\s*\|)/.test(lines[i])) p.push(lines[i++]);
+    if (!p.length) p.push(lines[i++]);
+    out += '<p>' + inline(p.join('<br>')) + '</p>';
   }
-  d.appendChild(document.createTextNode(text)); // textContent only: no HTML injection
+  return out;
+}
+function add(text, cls, steps, md) {
+  const d = document.createElement('div'); d.className = 'msg ' + (cls || (md ? 'bot' : 'plain'));
+  if (steps && steps.length) {
+    const calls = steps.filter(x => x.event === 'tool_call');
+    if (calls.length) {
+      const s = document.createElement('details'); s.className = 'steps';
+      const sum = document.createElement('summary'); sum.textContent = 'Steps (' + calls.length + ' tool calls)';
+      const body = document.createElement('div'); body.textContent = calls.map(x => '→ ' + x.name).join('\n');
+      s.append(sum, body); d.appendChild(s);
+    }
+  }
+  if (md) { const m = document.createElement('div'); m.className = 'md'; m.innerHTML = renderMarkdown(text); d.appendChild(m); }
+  else d.appendChild(document.createTextNode(text)); // textContent only for user text
   chat.appendChild(d); chat.scrollTop = chat.scrollHeight; return d;
 }
 form.addEventListener('submit', async (e) => {
@@ -68,7 +121,7 @@ form.addEventListener('submit', async (e) => {
       body: JSON.stringify({ question: text, session_id: sessionId }) });
     if (r.status === 401) { const t = prompt('Access token:'); if (t) sessionStorage.setItem('pereviewsre_token', t); throw new Error('Unauthorized – reload and retry'); }
     if (!r.ok) throw new Error('Request failed (' + r.status + ')');
-    const data = await r.json(); pending.remove(); add(data.answer, '', data.steps);
+    const data = await r.json(); pending.remove(); add(data.answer, '', data.steps, true);
   } catch (err) { pending.textContent = 'Error: ' + err.message; }
   finally { send.disabled = false; q.focus(); }
 });
