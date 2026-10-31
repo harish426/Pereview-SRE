@@ -10,6 +10,17 @@
   :root { --bg:#0b1020; --panel:#141b34; --line:#26305a; --fg:#e7ebff; --mut:#8f9bd1; --acc:#6c8cff; --acc2:#9b6cff; }
   * { box-sizing: border-box; }
   body { margin:0; font-family: Inter, system-ui, sans-serif; background: radial-gradient(1200px 600px at 20% -10%, #1b2457, var(--bg)); color:var(--fg); height:100vh; display:flex; flex-direction:column; }
+  #app { flex:1; display:flex; min-height:0; }
+  #side { width:260px; flex-shrink:0; border-right:1px solid var(--line); padding:12px; overflow:auto; display:flex; flex-direction:column; gap:6px; background:#0b102099; }
+  #side h2 { font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--mut); margin:6px 6px 4px; }
+  .ci { display:flex; align-items:center; gap:6px; padding:9px 10px; border-radius:10px; border:1px solid transparent; cursor:pointer; font-size:13px; color:var(--fg); }
+  .ci:hover { background:#ffffff0d; }
+  .ci.active { background:#6c8cff22; border-color:var(--acc); }
+  .ci span { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ci .del { background:none; border:0; padding:0 4px; color:var(--mut); border-radius:6px; }
+  .ci .del:hover { color:#fff; background:#ffffff22; transform:none; }
+  #pane { flex:1; min-width:0; display:flex; flex-direction:column; }
+  @media (max-width:700px) { #side { width:150px; } }
   header { padding:16px 24px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:12px; backdrop-filter: blur(8px); }
   header h1 { font-size:18px; margin:0; background:linear-gradient(90deg,var(--acc),var(--acc2)); -webkit-background-clip:text; color:transparent; }
   header span { color:var(--mut); font-size:13px; }
@@ -46,25 +57,50 @@
 </head>
 <body>
 <header><h1>pereviewsre</h1><span>AI SRE · Azure Application Insights</span><button id="newchat" type="button" style="margin-left:auto;padding:8px 14px">New chat</button></header>
+<div id="app">
+<nav id="side" aria-label="Chats"><h2>Chats</h2><div id="list"></div></nav>
+<div id="pane">
 <main id="chat" aria-live="polite"></main>
 <form id="form">
   <input id="q" autocomplete="off" placeholder="e.g. Why did checkout fail with 500s in the last hour?" required minlength="3">
   <button id="send" type="submit">Investigate</button>
 </form>
+</div>
+</div>
 <script>
 const chat = document.getElementById('chat'), form = document.getElementById('form'),
       q = document.getElementById('q'), send = document.getElementById('send');
 const token = sessionStorage.getItem('pereviewsre_token') || '';
-// One id per page load = one chat. Server-side memory is tied to it and dropped when the tab closes.
-let sessionId = crypto.randomUUID();
+// Chats live in page memory only (gone when the tab closes). Each chat has its own server session id,
+// so reopening an old chat continues with its server-side memory (until idle TTL or tab close).
+const chats = []; let cur = null;
+const listEl = document.getElementById('list');
 const authHeaders = () => (token ? {Authorization:'Bearer '+token} : {});
 function endSession(id) {
   fetch('/api/session/' + id, { method:'DELETE', headers: authHeaders(), keepalive: true }).catch(() => {});
 }
-window.addEventListener('pagehide', () => endSession(sessionId));
-document.getElementById('newchat').addEventListener('click', () => {
-  endSession(sessionId); sessionId = crypto.randomUUID(); chat.innerHTML = ''; q.focus();
-});
+window.addEventListener('pagehide', () => chats.forEach(c => endSession(c.id)));
+function renderList() {
+  listEl.textContent = '';
+  chats.forEach(c => {
+    const row = document.createElement('div'); row.className = 'ci' + (c === cur ? ' active' : '');
+    const t = document.createElement('span'); t.textContent = c.title; t.title = c.title;
+    const x = document.createElement('button'); x.type = 'button'; x.className = 'del'; x.textContent = '×'; x.title = 'Delete chat';
+    x.addEventListener('click', ev => { ev.stopPropagation(); removeChat(c); });
+    row.append(t, x); row.addEventListener('click', () => openChat(c)); listEl.appendChild(row);
+  });
+}
+function openChat(c) { cur = c; renderList(); renderChat(); send.disabled = c.busy; q.focus(); }
+function newChat() {
+  if (cur && !cur.items.length) { q.focus(); return; } // already on an empty chat
+  const c = { id: crypto.randomUUID(), title: 'New chat', items: [], busy: false };
+  chats.unshift(c); openChat(c);
+}
+function removeChat(c) {
+  endSession(c.id); chats.splice(chats.indexOf(c), 1);
+  if (c === cur) { chats.length ? openChat(chats[0]) : newChat(); } else renderList();
+}
+document.getElementById('newchat').addEventListener('click', newChat);
 const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 function inline(s) { // input is already HTML-escaped
   return s.replace(/`([^`]+)`/g, '<code>$1</code>')
@@ -95,10 +131,10 @@ function renderMarkdown(src) { // escape everything first, then add our own safe
   }
   return out;
 }
-function add(text, cls, steps, md) {
-  const d = document.createElement('div'); d.className = 'msg ' + (cls || (md ? 'bot' : 'plain'));
-  if (steps && steps.length) {
-    const calls = steps.filter(x => x.event === 'tool_call');
+function buildMsg(it) {
+  const d = document.createElement('div'); d.className = 'msg ' + (it.cls || (it.md ? 'bot' : 'plain'));
+  if (it.steps && it.steps.length) {
+    const calls = it.steps.filter(x => x.event === 'tool_call');
     if (calls.length) {
       const s = document.createElement('details'); s.className = 'steps';
       const sum = document.createElement('summary'); sum.textContent = 'Steps (' + calls.length + ' tool calls)';
@@ -106,25 +142,34 @@ function add(text, cls, steps, md) {
       s.append(sum, body); d.appendChild(s);
     }
   }
-  if (md) { const m = document.createElement('div'); m.className = 'md'; m.innerHTML = renderMarkdown(text); d.appendChild(m); }
-  else d.appendChild(document.createTextNode(text)); // textContent only for user text
-  chat.appendChild(d); chat.scrollTop = chat.scrollHeight; return d;
+  if (it.md) { const m = document.createElement('div'); m.className = 'md'; m.innerHTML = renderMarkdown(it.text); d.appendChild(m); }
+  else d.appendChild(document.createTextNode(it.text)); // textContent only for user text
+  return d;
 }
+function renderChat() {
+  chat.textContent = '';
+  cur.items.forEach(it => chat.appendChild(buildMsg(it)));
+  chat.scrollTop = chat.scrollHeight;
+}
+function addItem(c, it) { c.items.push(it); if (c === cur) { chat.appendChild(buildMsg(it)); chat.scrollTop = chat.scrollHeight; } return it; }
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   const text = q.value.trim(); if (!text) return;
-  add(text, 'user'); q.value = ''; send.disabled = true;
-  const pending = add('Investigating…');
+  const c = cur; if (c.busy) return;
+  if (!c.items.length) { c.title = text.length > 40 ? text.slice(0, 40) + '…' : text; renderList(); }
+  addItem(c, { text, cls: 'user' }); q.value = ''; c.busy = true; send.disabled = true;
+  const pending = addItem(c, { text: 'Investigating…' });
   try {
     const r = await fetch('/api/ask', { method:'POST',
       headers: { 'Content-Type':'application/json', ...authHeaders() },
-      body: JSON.stringify({ question: text, session_id: sessionId }) });
+      body: JSON.stringify({ question: text, session_id: c.id }) });
     if (r.status === 401) { const t = prompt('Access token:'); if (t) sessionStorage.setItem('pereviewsre_token', t); throw new Error('Unauthorized – reload and retry'); }
     if (!r.ok) throw new Error('Request failed (' + r.status + ')');
-    const data = await r.json(); pending.remove(); add(data.answer, '', data.steps, true);
-  } catch (err) { pending.textContent = 'Error: ' + err.message; }
-  finally { send.disabled = false; q.focus(); }
+    const data = await r.json(); Object.assign(pending, { text: data.answer, steps: data.steps, md: true });
+  } catch (err) { pending.text = 'Error: ' + err.message; }
+  finally { c.busy = false; if (c === cur) { renderChat(); send.disabled = false; q.focus(); } }
 });
+newChat();
 </script>
 </body>
 </html>

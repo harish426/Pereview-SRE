@@ -12,9 +12,12 @@ src/pereviewsre/
   tools/registry.py    read-only tools: run_kql, get_trace
   integrations/        Application Insights client (Entra ID auth)
   security/            kql_guard (read-only policy), redaction (secrets/PII)
+  memory/              per-chat memory (facts + recent answers, in RAM only)
   web/                 FastAPI + chat UI
   cli.py               pereviewsre ask | chat | web
-tests/                 guardrail tests
+function_app.py         Azure Functions entry point (wraps the same web app)
+tests/                 guardrail, memory and web API tests
+docs/                   Azure deployment guide
 ```
 
 ## Prerequisites
@@ -90,6 +93,11 @@ copy .env.local.example .env.local
 | `PEREVIEWSRE_AOAI_API_KEY` | Optional. Leave empty for keyless Entra ID auth |
 | `PEREVIEWSRE_WEB_TOKEN` | Bearer token for the API. Required in production |
 
+Optional settings (defaults in brackets): `PEREVIEWSRE_MEMORY_TTL_S` [1800, idle seconds before a
+chat's memory expires], `PEREVIEWSRE_MEMORY_MAX_EPISODES` [10, answers remembered per chat],
+`PEREVIEWSRE_MEMORY_MAX_SESSIONS` [50, chats remembered at once], `PEREVIEWSRE_MAX_AGENT_STEPS` [8],
+`PEREVIEWSRE_MAX_ROWS` [200], `PEREVIEWSRE_QUERY_TIMEOUT_S` [60], `PEREVIEWSRE_DEFAULT_LOOKBACK_HOURS` [24].
+
 Find the resource ID with:
 ```powershell
 az monitor app-insights component show --app <name> -g <resource-group> --query id -o tsv
@@ -140,6 +148,42 @@ curl -X POST http://localhost:7071/api/ask -H "Content-Type: application/json" `
 
 Without installing the script entry point you can also run `python -m pereviewsre.cli ask "..."`.
 
+## Web chat and chat memory
+The web UI shows each answer in sections (Summary, Evidence, Root cause, Recommended actions)
+with formatted tables and code. The tool calls are in a collapsible "Steps" line.
+
+- **Chats on the left:** press **New chat** to start another one. The old chat stays in the
+  sidebar; click it to reopen and keep working on it. **×** deletes a chat.
+- **Lifetime:** chats live in the open browser tab only. Closing or reloading the tab clears them.
+- **Each chat has its own memory**, so one chat never sees another's context.
+
+Memory is kept in the server's RAM only (nothing on disk) and only the important parts are stored:
+
+1. **Known facts**: time window, services, latest operation_Ids, root causes (with confidence)
+   and open next steps. Always sent to the model, and its size is capped.
+2. **Recent vs. older answers**: the 2 newest answers in full, older ones as a one-line digest.
+3. **No noise**: duplicate and failed tool calls are skipped, answers are trimmed to Root cause and
+   Recommended actions, raw results are never stored, and everything is redacted first.
+
+It expires after 30 minutes idle, at 10 answers per chat, and at 50 chats on the server (least
+recently used goes first). The `pereviewsre chat` terminal mode has the same memory for one session.
+
+## Deploy to Azure (in order)
+Full commands are in [docs/DEPLOY_AZURE_FUNCTIONS.md](docs/DEPLOY_AZURE_FUNCTIONS.md). The order:
+
+1. Make sure it works locally first (`func start` with your `local.settings.json`, and `pytest`).
+2. Create the Azure resources: resource group, storage account, Linux Function App (Python 3.11)
+   with a system-assigned managed identity.
+3. Give the Function App's identity access: *Monitoring Reader* and *Log Analytics Reader* on
+   App Insights, *Cognitive Services OpenAI User* on Azure OpenAI.
+4. Set the app settings: the variables from the table above, with `PEREVIEWSRE_ENV=production` and a
+   long random `PEREVIEWSRE_WEB_TOKEN` (mandatory in production, otherwise requests get 503).
+5. Publish: `func azure functionapp publish <app-name>`.
+6. Open `https://<app-name>.azurewebsites.net/` (it asks for the token) or call `POST /api/ask`.
+
+In production, chat memory is per server instance and in RAM: if Azure restarts or scales the app,
+the agent forgets that chat's context. HTTP calls are cut off by Azure after about 230 seconds.
+
 ## Logs
 Every component (agent, tool registry, App Insights client, CLI, web service) writes to a
 shared rotating log file at `logs/pereviewsre.log` (also echoed to the console). Each line is
@@ -162,6 +206,8 @@ KQL queries, row/column counts, rejected queries and errors. Telemetry row conte
 - **401/403 from Azure**: re-run `az login` and check the role assignments above.
 - **`pereviewsre` not found**: activate the virtualenv first.
 - **pip read timeout**: use the `--default-timeout 120 --retries 10` install command above.
+- **Agent forgets earlier chat**: the chat idled past the memory timeout, the 50-chat limit was hit,
+  or the server restarted.
 
 See [SECURITY.md](SECURITY.md) for the security model and
 [docs/DEPLOY_AZURE_FUNCTIONS.md](docs/DEPLOY_AZURE_FUNCTIONS.md) to run it in Azure Functions.

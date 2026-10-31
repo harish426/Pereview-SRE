@@ -91,9 +91,10 @@ class SreAgent:
       messages.append(msg.model_dump(exclude_none=True))
       for call in msg.tool_calls:
         args = redact_text(call.function.arguments or "")
-        ran.append(f"{call.function.name} {args}")
         emit("tool_call", {"name": call.function.name, "args": args})
         result = self._tools.execute(call.function.name, call.function.arguments)
+        if not result.startswith('{"error"'):  # only remember calls that worked
+          ran.append(f"{call.function.name} {args}")
         emit("tool_result", {"name": call.function.name, "size": len(result)})
         messages.append({"role": "tool", "tool_call_id": call.id, "content": result})
 

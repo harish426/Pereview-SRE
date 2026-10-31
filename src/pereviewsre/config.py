@@ -37,7 +37,7 @@ class Settings(BaseSettings):
   # Episodic (per-chat, in-process) memory
   memory_ttl_s: int = Field(1800, ge=60, le=86400)  # idle expiry
   memory_max_episodes: int = Field(10, ge=1, le=50)  # per chat
-  memory_max_sessions: int = Field(500, ge=1, le=10000)
+  memory_max_sessions: int = Field(50, ge=1, le=10000)
 
   web_host: str = "127.0.0.1"
   web_port: int = 8080

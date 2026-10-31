@@ -32,12 +32,12 @@ Use a Premium/Flex plan instead if you need longer investigations (see Limits).
 
 ## 4. Grant the managed identity access (least privilege)
 ```powershell
-$PID=(az functionapp identity show -n $APP -g $RG --query principalId -o tsv)
+$PRINCIPAL=(az functionapp identity show -n $APP -g $RG --query principalId -o tsv)
 # Read telemetry from the one App Insights resource
-az role assignment create --assignee $PID --role "Monitoring Reader" --scope <APPINSIGHTS_RESOURCE_ID>
-az role assignment create --assignee $PID --role "Log Analytics Reader" --scope <APPINSIGHTS_RESOURCE_ID>
+az role assignment create --assignee $PRINCIPAL --role "Monitoring Reader" --scope <APPINSIGHTS_RESOURCE_ID>
+az role assignment create --assignee $PRINCIPAL --role "Log Analytics Reader" --scope <APPINSIGHTS_RESOURCE_ID>
 # Call Azure OpenAI keylessly
-az role assignment create --assignee $PID --role "Cognitive Services OpenAI User" --scope <AOAI_RESOURCE_ID>
+az role assignment create --assignee $PRINCIPAL --role "Cognitive Services OpenAI User" --scope <AOAI_RESOURCE_ID>
 ```
 
 ## 5. App settings (secrets in Key Vault references if possible)
